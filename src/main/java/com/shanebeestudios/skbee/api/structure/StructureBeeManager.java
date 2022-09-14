@@ -19,19 +19,7 @@ public class StructureBeeManager {
         if (STRUCTURE_MAP.containsKey(name)) {
             return STRUCTURE_MAP.get(name);
         } else {
-            name = name.toLowerCase(Locale.ROOT);
-            NamespacedKey namespacedKey;
-            try {
-                if (name.contains(":")) {
-                    namespacedKey = NamespacedKey.fromString(name);
-                } else {
-                    namespacedKey = NamespacedKey.minecraft(name);
-                }
-            } catch (IllegalArgumentException ex) {
-                Util.skriptError(ex.getMessage());
-                return null;
-            }
-
+            NamespacedKey namespacedKey = Util.getNamespacedKey(name, true);
             if (namespacedKey == null) {
                 return null;
             }
@@ -45,6 +33,14 @@ public class StructureBeeManager {
             STRUCTURE_MAP.put(name, structureBee);
             return structureBee;
         }
+    }
+
+    public boolean structureExists(String name) {
+        NamespacedKey namespacedKey = Util.getNamespacedKey(name, true);
+        if (namespacedKey == null) {
+            return false;
+        }
+        return STRUCTURE_MANAGER.loadStructure(namespacedKey, false) != null;
     }
 
 }

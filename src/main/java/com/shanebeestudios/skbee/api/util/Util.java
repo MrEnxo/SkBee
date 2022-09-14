@@ -5,10 +5,13 @@ import ch.njol.skript.log.ErrorQuality;
 import com.shanebeestudios.skbee.SkBee;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -68,6 +71,32 @@ public class Util {
 
     public static List<String> getDebugs() {
         return DEBUGS;
+    }
+
+    public static NamespacedKey getNamespacedKey(@NotNull String key, boolean error) {
+        if (key.contains(" ")) {
+            key = key.replace(" ", "_");
+        }
+        key = key.toLowerCase(Locale.ROOT);
+        if (key.contains(":")) {
+            NamespacedKey namespacedKey = NamespacedKey.fromString(key);
+            if (namespacedKey == null) {
+                if (error) {
+                    skriptError("Invalid key. Must be [a-z0-9/._-:]: %s", key);
+                }
+                return null;
+            }
+            return namespacedKey;
+        } else {
+            try {
+                return new NamespacedKey(SkBee.getPlugin(), key);
+            } catch (IllegalArgumentException ex) {
+                if (error) {
+                    skriptError(ex.getMessage());
+                }
+                return null;
+            }
+        }
     }
 
     /**

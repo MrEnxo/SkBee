@@ -1,16 +1,19 @@
 package com.shanebeestudios.skbee.elements.bound.objects;
 
+import com.google.common.base.Preconditions;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.configuration.serialization.SerializableAs;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,67 +21,58 @@ import java.util.Objects;
 import java.util.UUID;
 
 @SuppressWarnings("unused")
+@SerializableAs("Bound")
 public class Bound implements ConfigurationSerializable {
 
-    private int x;
-    private int y;
-    private int z;
-    private int x2;
-    private int y2;
-    private int z2;
     private final String world;
     private String id;
     private List<UUID> owners = new ArrayList<>();
     private List<UUID> members = new ArrayList<>();
+    private Map<String, Object> values = new HashMap<>();
+    private BoundingBox boundingBox;
 
     /**
-     * Create a new bounding box between 2 sets of coordinates
+     * Create a new bound in a {@link World} with ID using a {@link BoundingBox}
      *
-     * @param world World this bound is in
-     * @param x     x coord of 1st corner of bound
-     * @param y     y coord of 1st corner of bound
-     * @param z     z coord of 1st corner of bound
-     * @param x2    x coord of 2nd corner of bound
-     * @param y2    y coord of 2nd corner of bound
-     * @param z2    z coord of 2nd corner of bound
+     * @param world       World this bound is in
+     * @param id          ID of this bound
+     * @param boundingBox BoundingBox of this bound
      */
-    public Bound(String world, int x, int y, int z, int x2, int y2, int z2, String id) {
+    public Bound(String world, String id, BoundingBox boundingBox) {
         this.world = world;
-        this.x = Math.min(x, x2);
-        this.y = Math.min(y, y2);
-        this.z = Math.min(z, z2);
-        this.x2 = Math.max(x, x2);
-        this.y2 = Math.max(y, y2);
-        this.z2 = Math.max(z, z2);
         this.id = id;
+        this.boundingBox = boundingBox;
     }
 
     /**
-     * Create a new bounding box between 2 locations (must be in same world)
+     * Create a new bound between 2 locations (must be in same world)
      *
      * @param location  Location 1
      * @param location2 Location 2
+     * @param id        ID of this bound
      */
     public Bound(Location location, Location location2, String id) {
-        this(Objects.requireNonNull(location.getWorld()).getName(), location.getBlockX(), location.getBlockY(),
-                location.getBlockZ(), location2.getBlockX(), location2.getBlockY(), location2.getBlockZ(), id);
-    }
+        Preconditions.checkArgument(location.getWorld() == location2.getWorld(), "Worlds have to match");
+        this.world = location.getWorld().getName();
+        this.id = id;
 
-    /**
-     * Create a bounding box based on a serialized string from {@link #toString()}
-     *
-     * @param string String to create a new bound from
-     */
-    public Bound(String string) {
-        String[] coords = string.split(":");
-        this.world = coords[0];
-        this.x = Integer.parseInt(coords[1]);
-        this.y = Integer.parseInt(coords[2]);
-        this.z = Integer.parseInt(coords[3]);
-        this.x2 = Integer.parseInt(coords[4]);
-        this.y2 = Integer.parseInt(coords[5]);
-        this.z2 = Integer.parseInt(coords[6]);
-        this.id = coords[7];
+        Location loc1 = location.getBlock().getLocation();
+        int blockX = loc1.getBlockX();
+        int blockY = loc1.getBlockY();
+        int blockZ = loc1.getBlockZ();
+
+        Location loc2 = location2.getBlock().getLocation();
+        int blockX1 = loc2.getBlockX();
+        int blockY1 = loc2.getBlockY();
+        int blockZ1 = loc2.getBlockZ();
+
+        int minX = Math.min(blockX, blockX1);
+        int minY = Math.min(blockY, blockY1);
+        int minZ = Math.min(blockZ, blockZ1);
+        int maxX = Math.max(blockX, blockX1) + 1;
+        int maxY = Math.max(blockY, blockY1) + 1;
+        int maxZ = Math.max(blockZ, blockZ1) + 1;
+        this.boundingBox = new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     /**
@@ -89,34 +83,34 @@ public class Bound implements ConfigurationSerializable {
      */
     public boolean isInRegion(Location loc) {
         if (!Objects.requireNonNull(loc.getWorld()).getName().equals(world)) return false;
-        int cx = loc.getBlockX();
-        int cy = loc.getBlockY();
-        int cz = loc.getBlockZ();
-        return (cx >= x && cx <= x2) && (cy >= y && cy <= y2) && (cz >= z && cz <= z2);
+        return this.boundingBox.contains(loc.toVector());
     }
 
     /**
-     * Get location of all blocks of a type within a bound
+     * Check if this bound overlaps another bound
      *
-     * @param type Material type to check
-     * @return ArrayList of locations of all blocks of this type in this bound
+     * @param bound Bound to check for overlapping
+     * @return True if bound overlaps
      */
-    @SuppressWarnings("unused")
-    public List<Location> getBlocks(Material type) {
-        World w = Bukkit.getWorld(world);
-        ArrayList<Location> array = new ArrayList<>();
-        for (int x3 = x; x3 <= x2; x3++) {
-            for (int y3 = y; y3 <= y2; y3++) {
-                for (int z3 = z; z3 <= z2; z3++) {
-                    assert w != null;
-                    Block b = w.getBlockAt(x3, y3, z3);
-                    if (b.getType() == type) {
-                        array.add(b.getLocation());
-                    }
-                }
-            }
+    public boolean overlaps(Bound bound) {
+        if (bound.world.equals(world)) {
+            return boundingBox.overlaps(bound.boundingBox);
         }
-        return array;
+        return false;
+    }
+
+    /**
+     * Check if this bound overlaps another potential bound within 2 locations
+     *
+     * @param l1 Location 1 of potential bound
+     * @param l2 Location 2 of potential bound
+     * @return True if bound overlaps
+     */
+    public boolean overlaps(Location l1, Location l2) {
+        if (l1.getWorld() != null && l1.getWorld() == l2.getWorld()) {
+            return boundingBox.overlaps(l1.toVector(), l2.toVector());
+        }
+        return false;
     }
 
     /**
@@ -127,12 +121,10 @@ public class Bound implements ConfigurationSerializable {
      * @return List of loaded entities in bound
      */
     public List<Entity> getEntities(Class<? extends Entity> type) {
-        World world = Bukkit.getWorld(this.world);
-        if (world == null) {
-            return null;
-        }
-        BoundingBox box = new BoundingBox(x, y, z, x2, y2, z2);
-        Collection<Entity> nearbyEntities = world.getNearbyEntities(box, entity -> type.isAssignableFrom(entity.getClass()));
+        World world = getWorld();
+        if (world == null) return null;
+        Collection<Entity> nearbyEntities = world.getNearbyEntities(this.boundingBox, entity ->
+                type.isAssignableFrom(entity.getClass()) && isInRegion(entity.getLocation()));
         return new ArrayList<>(nearbyEntities);
     }
 
@@ -142,13 +134,19 @@ public class Bound implements ConfigurationSerializable {
      * @return List of blocks within bound
      */
     public List<Block> getBlocks() {
-        World w = Bukkit.getWorld(world);
+        World w = getWorld();
+        if (w == null) return null;
         List<Block> array = new ArrayList<>();
-        for (int x3 = x; x3 <= x2; x3++) {
-            for (int y3 = y; y3 <= y2; y3++) {
-                for (int z3 = z; z3 <= z2; z3++) {
-                    assert w != null;
-                    Block b = w.getBlockAt(x3, y3, z3);
+        int minX = (int) boundingBox.getMinX();
+        int minY = (int) boundingBox.getMinY();
+        int minZ = (int) boundingBox.getMinZ();
+        int maxX = (int) boundingBox.getMaxX();
+        int maxY = (int) boundingBox.getMaxY();
+        int maxZ = (int) boundingBox.getMaxZ();
+        for (int x = minX; x < maxX; x++) {
+            for (int y = minY; y < maxY; y++) {
+                for (int z = minZ; z < maxZ; z++) {
+                    Block b = w.getBlockAt(x, y, z);
                     array.add(b);
                 }
             }
@@ -171,7 +169,9 @@ public class Bound implements ConfigurationSerializable {
      * @return Location of greater corner
      */
     public Location getGreaterCorner() {
-        return new Location(Bukkit.getWorld(world), x2, y2, z2);
+        World world = getWorld();
+        if (world == null) return null;
+        return boundingBox.getMax().toLocation(world);
     }
 
     /**
@@ -180,7 +180,9 @@ public class Bound implements ConfigurationSerializable {
      * @return Location of lesser corner
      */
     public Location getLesserCorner() {
-        return new Location(Bukkit.getWorld(world), x, y, z);
+        World world = getWorld();
+        if (world == null) return null;
+        return boundingBox.getMin().toLocation(world);
     }
 
     /**
@@ -189,76 +191,93 @@ public class Bound implements ConfigurationSerializable {
      * @return The center location
      */
     public Location getCenter() {
-        BoundingBox box = new BoundingBox(x, y, z, x2, y2, z2);
-        return new Location(this.getWorld(), box.getCenterX(), box.getCenterY(), box.getCenterZ());
+        World world = getWorld();
+        if (world == null) return null;
+        return boundingBox.getCenter().toLocation(world);
     }
 
     public int getLesserX() {
-        return x;
+        return ((int) boundingBox.getMinX());
     }
 
     public void setLesserX(int x) {
-        this.x = x;
+        Vector min = this.boundingBox.getMin();
+        min.setX(x);
+        resize(min, this.boundingBox.getMax());
     }
 
     public int getLesserY() {
-        return y;
+        return ((int) boundingBox.getMinY());
     }
 
     public void setLesserY(int y) {
-        this.y = y;
+        Vector min = this.boundingBox.getMin();
+        min.setY(y);
+        resize(min, this.boundingBox.getMax());
     }
 
     public int getLesserZ() {
-        return z;
+        return ((int) boundingBox.getMinZ());
     }
 
     public void setLesserZ(int z) {
-        this.z = z;
+        Vector min = this.boundingBox.getMin();
+        min.setZ(z);
+        resize(min, this.boundingBox.getMax());
     }
 
     public int getGreaterX() {
-        return x2;
+        return ((int) boundingBox.getMaxX());
     }
 
     public void setGreaterX(int x2) {
-        this.x2 = x2;
+        Vector max = this.boundingBox.getMax();
+        max.setX(x2);
+        resize(this.boundingBox.getMin(), max);
     }
 
     public int getGreaterY() {
-        return y2;
+        return ((int) boundingBox.getMaxY());
     }
 
     public void setGreaterY(int y2) {
-        this.y2 = y2;
+        Vector max = this.boundingBox.getMax();
+        max.setY(y2);
+        resize(this.boundingBox.getMin(), max);
     }
 
     public int getGreaterZ() {
-        return z2;
+        return ((int) boundingBox.getMaxZ());
     }
 
     public void setGreaterZ(int z2) {
-        this.z2 = z2;
+        Vector max = this.boundingBox.getMax();
+        max.setZ(z2);
+        resize(this.boundingBox.getMin(), max);
+    }
+
+    public void resize(Vector v1, Vector v2) {
+        this.boundingBox = this.boundingBox.resize(v1.getX(), v1.getY(), v1.getZ(), v2.getX(), v2.getY(), v2.getZ());
     }
 
     public void change(Axis axis, Corner corner, int amount) {
         if (axis == Axis.X) {
             if (corner == Corner.GREATER) {
-                x2 += amount;
+                setGreaterX(getGreaterX() + amount);
             } else {
-                x += amount;
+                setLesserX(getLesserX() + amount);
             }
         } else if (axis == Axis.Y) {
             if (corner == Corner.GREATER) {
-                y2 += amount;
+                setGreaterY(getGreaterY() + amount);
             } else {
-                y += amount;
+                setLesserY(getLesserY() + amount);
             }
         } else {
             if (corner == Corner.GREATER) {
-                z2 += amount;
+                setGreaterZ(getGreaterZ() + amount);
             } else {
-                z += amount;
+                setLesserZ(getLesserZ() + amount);
             }
         }
     }
@@ -323,6 +342,35 @@ public class Bound implements ConfigurationSerializable {
         this.members.remove(member);
     }
 
+    public void setValue(String key, Object value) {
+        this.values.put(key, value);
+    }
+
+    public void deleteValue(String key) {
+        this.values.remove(key);
+    }
+
+    public void clearValues() {
+        this.values = new HashMap<>();
+    }
+
+    public Object getValue(String key) {
+        return this.values.get(key);
+    }
+
+    public Map<String, Object> getValues() {
+        return values;
+    }
+
+    /**
+     * Get the instance of the Bukkit {@link BoundingBox}
+     *
+     * @return Bukkit BoundingBox
+     */
+    public BoundingBox getBoundingBox() {
+        return this.boundingBox;
+    }
+
     public String toString() {
         return this.id;
     }
@@ -337,14 +385,9 @@ public class Bound implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        result.put("world", world);
-        result.put("x1", x);
-        result.put("y1", y);
-        result.put("z1", z);
-        result.put("x2", x2);
-        result.put("y2", y2);
-        result.put("z2", z2);
         result.put("id", id);
+        result.put("world", world);
+        result.put("boundingbox", boundingBox);
 
         List<String> owners = new ArrayList<>();
         this.owners.forEach(uuid -> owners.add(uuid.toString()));
@@ -352,6 +395,7 @@ public class Bound implements ConfigurationSerializable {
         this.members.forEach(uuid -> members.add(uuid.toString()));
         result.put("owners", owners);
         result.put("members", members);
+        result.put("values", values);
 
         return result;
     }
@@ -365,15 +409,21 @@ public class Bound implements ConfigurationSerializable {
     @SuppressWarnings("unchecked")
     public static Bound deserialize(Map<String, Object> args) {
         String world = ((String) args.get("world"));
-        int x = ((Number) args.get("x1")).intValue();
-        int y = ((Number) args.get("y1")).intValue();
-        int z = ((Number) args.get("z1")).intValue();
-        int x2 = ((Number) args.get("x2")).intValue();
-        int y2 = ((Number) args.get("y2")).intValue();
-        int z2 = ((Number) args.get("z2")).intValue();
         String id = String.valueOf(args.get("id"));
-
-        Bound bound = new Bound(world, x, y, z, x2, y2, z2, id);
+        Bound bound;
+        if (args.containsKey("boundingbox")) {
+            BoundingBox box = ((BoundingBox) args.get("boundingbox"));
+            bound = new Bound(world, id, box);
+        } else {
+            int x = ((Number) args.get("x1")).intValue();
+            int y = ((Number) args.get("y1")).intValue();
+            int z = ((Number) args.get("z1")).intValue();
+            int x2 = ((Number) args.get("x2")).intValue();
+            int y2 = ((Number) args.get("y2")).intValue();
+            int z2 = ((Number) args.get("z2")).intValue();
+            BoundingBox box = new BoundingBox(x, y, z, x2, y2, z2);
+            bound = new Bound(world, id, box);
+        }
 
         if (args.containsKey("owners")) {
             List<String> owners = (List<String>) args.get("owners");
@@ -393,6 +443,10 @@ public class Bound implements ConfigurationSerializable {
                 memberUUIDs.add(uuid);
             });
             bound.setMembers(memberUUIDs);
+        }
+
+        if (args.containsKey("values")) {
+            bound.values = (Map<String, Object>) args.get("values");
         }
 
         return bound;

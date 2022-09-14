@@ -14,9 +14,11 @@ import ch.njol.skript.log.ErrorQuality;
 import ch.njol.util.Kleenean;
 import com.shanebeestudios.skbee.api.NBT.NBTApi;
 import de.tr7zw.changeme.nbtapi.NBTItem;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.HoverEvent.Action;
 import net.md_5.bungee.api.chat.ItemTag;
+import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.chat.hover.content.Content;
 import net.md_5.bungee.api.chat.hover.content.Item;
 import net.md_5.bungee.api.chat.hover.content.Text;
@@ -31,7 +33,8 @@ import java.util.List;
 
 @SuppressWarnings("deprecation") // Paper deprecations
 @Name("Text Component - Hover Event")
-@Description("Create a new hover event. Can show text or an item to a player. 'showing %itemtype%' requires Minecraft 1.16.2+")
+@Description({"Create a new hover event. Can show text or an item to a player. 'showing %itemtype%' requires Minecraft 1.16.2+",
+        "When showing an ItemType from a variable, use `...showing item {var}`, this is just a weird quirk of this."})
 @Examples({"set {_t} to text component from \"Check out my cool tool!\"",
         "set hover event of {_t} to a new hover event showing player's tool",
         "send component {_t} to player"})
@@ -72,7 +75,8 @@ public class ExprHoverEvent extends SimpleExpression<HoverEvent> {
             String[] string = ((String[]) this.object.getArray(event));
             List<Content> texts = new ArrayList<>();
             for (int i = 0; i < string.length; i++) {
-                texts.add(new Text(string[i] + (i < (string.length - 1) ? System.lineSeparator() : "")));
+                BaseComponent[] baseComponents = TextComponent.fromLegacyText(string[i] + (i < (string.length - 1) ? System.lineSeparator() : ""));
+                texts.add(new Text(baseComponents));
             }
             return new HoverEvent[]{new HoverEvent(Action.SHOW_TEXT, texts)};
         } else if (pattern == 1) {

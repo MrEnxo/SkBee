@@ -89,12 +89,12 @@ public class NBTApi {
         try {
             compound = new NBTContainer(nbtString);
         } catch (Exception ex) {
-            Util.skriptError("&cInvalid NBT: &7'&b" + nbtString + "&7'&c");
+            Util.skriptError("&cInvalid NBT: &7'&b%s&7'&c", nbtString);
 
             if (DEBUG) {
                 ex.printStackTrace();
             } else {
-                Util.skriptError("&cCause: &e" + ex.getMessage());
+                Util.skriptError("&cCause: &e%s", ex.getMessage());
             }
             return null;
         }
@@ -121,6 +121,24 @@ public class NBTApi {
             return splits[splits.length - 1];
         }
         return tag;
+    }
+
+    @SuppressWarnings("RegExpRedundantEscape")
+    public static boolean hasTag(NBTCompound compound, String tag) {
+        if (compound == null) return false;
+        if (tag == null) return false;
+        if (tag.contains(";")) {
+            String[] splits = tag.split(";(?=(([^\\\"]*\\\"){2})*[^\\\"]*$)");
+            for (int i = 0; i < splits.length - 1; i++) {
+                String split = splits[i];
+                if (compound.hasTag(split) && compound.getCompound(split) != null) {
+                    compound = compound.getCompound(split);
+                } else {
+                    return false;
+                }
+            }
+        }
+        return compound.hasTag(getNestedTag(tag));
     }
 
     /**
