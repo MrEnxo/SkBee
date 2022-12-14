@@ -261,6 +261,17 @@ public class SkBee extends JavaPlugin {
             Util.logLoading("&5Text Component Elements &cdisabled via config");
             return;
         }
+        if (!Skript.classExists("net.kyori.adventure.text.Component")) {
+            Util.logLoading("&5Text Component Elements &cdisabled");
+            Util.logLoading("&7- Text components require a PaperMC server.");
+            return;
+        }
+        if (Classes.getClassInfoNoError("textcomponent") != null) {
+            Util.logLoading("&5Text Component Elements &cdisabled");
+            Util.logLoading("&7It appears another Skript addon may have registered Text Component syntax.");
+            Util.logLoading("&7To use SkBee Text Components, please remove the addon which has registered Text Components already.");
+            return;
+        }
         try {
             addon.loadClasses("com.shanebeestudios.skbee.elements.text");
             Util.logLoading("&5Text Component Elements &asuccessfully loaded");

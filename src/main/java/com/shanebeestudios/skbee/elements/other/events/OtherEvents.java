@@ -8,15 +8,24 @@ import ch.njol.skript.util.Getter;
 import ch.njol.skript.util.slot.Slot;
 import com.shanebeestudios.skbee.api.event.EntityBlockInteractEvent;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityBreedEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
+import org.bukkit.event.entity.EntityTransformEvent.TransformReason;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.player.PlayerCommandSendEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerQuitEvent.QuitReason;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
@@ -146,6 +155,120 @@ public class OtherEvents {
                     return new ItemType(bredWith);
                 }
                 return null;
+            }
+        }, 0);
+
+        // Inventory Move Item Event
+        Skript.registerEvent("Inventory Move Item", SimpleEvent.class, InventoryMoveItemEvent.class,
+                        "inventory move item")
+                .description("Called when some entity or block (e.g. hopper) tries to move items directly from one inventory to another.",
+                        "\nWhen this event is called, the initiator may already have removed the item from the source inventory and is ready to move it into the destination inventory.",
+                        "\nIf this event is cancelled, the items will be returned to the source inventory, if needed.",
+                        "\nIf this event is not cancelled, the initiator will try to put the ItemStack into the destination inventory.",
+                        "If this is not possible and the ItemStack has not been modified, the source inventory slot will be restored to its former state. Otherwise any additional items will be discarded.",
+                        "\nevent-inventory = Inventory that initiated the transfer.",
+                        "\npast event-inventory = Inventory that the ItemStack is being taken from.",
+                        "\nfuture event-inventory = Inventory that the ItemStack is being put into.")
+                .examples("on inventory move item:",
+                        "\tif type of past event-inventory = hopper inventory:",
+                        "\t\tcancel event")
+                .since("2.5.2");
+
+        EventValues.registerEventValue(InventoryMoveItemEvent.class, Inventory.class, new Getter<>() {
+            @Override
+            public @NotNull Inventory get(InventoryMoveItemEvent event) {
+                return event.getInitiator();
+            }
+        }, 0);
+
+        EventValues.registerEventValue(InventoryMoveItemEvent.class, Inventory.class, new Getter<>() {
+            @Override
+            public @NotNull Inventory get(InventoryMoveItemEvent event) {
+                return event.getSource();
+            }
+        }, -1);
+
+        EventValues.registerEventValue(InventoryMoveItemEvent.class, Inventory.class, new Getter<>() {
+            @Override
+            public @NotNull Inventory get(InventoryMoveItemEvent event) {
+                return event.getDestination();
+            }
+        }, 1);
+
+        EventValues.registerEventValue(InventoryMoveItemEvent.class, ItemStack.class, new Getter<>() {
+            @Override
+            public @NotNull ItemStack get(InventoryMoveItemEvent event) {
+                return event.getItem();
+            }
+        }, 0);
+
+        // Entity Transform Event
+        Skript.registerEvent("Entity Transform", SimpleEvent.class, EntityTransformEvent.class,
+                        "entity transform")
+                .description("Called when an entity is about to be replaced by another entity.",
+                        "Examples include a villager struck by lightning turning into a witch,",
+                        "zombie drowning and becoming a drowned,",
+                        "slime splitting into other slimes.",
+                        "\nevent-entity = entity that is going to transform",
+                        "\nfuture event-entity = entity after transformation (only returns one entity)",
+                        "\nevent-transformreason = reason for the transformation",
+                        "\ntransformed entit(y|ies) = entity or entities after transformation (can be multiple entities)")
+                .examples("on entity transform:",
+                        "\tif event-entity is a villager:",
+                        "\t\tcancel event")
+                .since("2.5.3");
+
+        EventValues.registerEventValue(EntityTransformEvent.class, Entity.class, new Getter<>() {
+            @Override
+            public Entity get(EntityTransformEvent event) {
+                return event.getTransformedEntity();
+            }
+        }, 1);
+
+        EventValues.registerEventValue(EntityTransformEvent.class, TransformReason.class, new Getter<>() {
+            @Override
+            public TransformReason get(EntityTransformEvent event) {
+                return event.getTransformReason();
+            }
+        }, 0);
+
+        // Entity Change Block Event
+        Skript.registerEvent("Entity Change Block", SimpleEvent.class, EntityChangeBlockEvent.class,
+                        "entity change block")
+                .description("Called when any Entity changes a block and a more specific event is not available.",
+                        "Skript does partially have this event, but this version of it opens up ALL possibilities with this event.",
+                        "\nevent-entity = the entity which changed the block",
+                        "\nevent-block = the block that changed",
+                        "\nevent-blockdata = the blockdata the block has changed into")
+                .examples("on entity change block:",
+                        "\tif event-entity is a villager:",
+                        "\t\tif event-block is a composter:",
+                        "\t\t\theal event-entity")
+                .since("2.5.3");
+
+        EventValues.registerEventValue(EntityChangeBlockEvent.class, BlockData.class, new Getter<>() {
+            @Override
+            public @NotNull BlockData get(EntityChangeBlockEvent event) {
+                return event.getBlockData();
+            }
+        }, 0);
+
+        // Player Command Send Event
+        Skript.registerEvent("Player Command Send", SimpleEvent.class, PlayerCommandSendEvent.class,
+                        "player command send")
+                .description("This event is called when the list of available server commands is sent to the player.",
+                        "Commands may be removed from display using this event, but implementations are not required to securely",
+                        "remove all traces of the command. If secure removal of commands is required,",
+                        "then the command should be assigned a permission which is not granted to the player.")
+                .examples("on player command send:",
+                        "\tremove \"ver\" and \"version\" from player command map")
+                .since("2.5.3");
+
+        // Player Quit Event
+        EventValues.registerEventValue(PlayerQuitEvent.class, QuitReason.class, new Getter<>() {
+            @Override
+            public @NotNull QuitReason get(PlayerQuitEvent event) {
+                return event.getReason();
             }
         }, 0);
     }

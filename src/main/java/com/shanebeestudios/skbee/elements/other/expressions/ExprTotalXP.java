@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 public class ExprTotalXP extends PropertyExpression<Player, Integer> {
 
     static {
-        register(ExprTotalXP.class, Integer.class, "total (xp|experience) [points]", "players");
+        register(ExprTotalXP.class, Integer.class, "[total] (xp|experience) [points]", "players");
     }
 
     @SuppressWarnings({"unchecked", "null", "NullableProblems"})
@@ -51,7 +51,7 @@ public class ExprTotalXP extends PropertyExpression<Player, Integer> {
     @Nullable
     @Override
     public Class<?>[] acceptChange(ChangeMode mode) {
-        if (mode == ChangeMode.SET || mode == ChangeMode.ADD || mode == ChangeMode.REMOVE) {
+        if (mode == ChangeMode.SET || mode == ChangeMode.ADD || mode == ChangeMode.REMOVE || mode == ChangeMode.DELETE) {
             return CollectionUtils.array(Number.class);
         }
         return null;
@@ -66,6 +66,7 @@ public class ExprTotalXP extends PropertyExpression<Player, Integer> {
                 case ADD -> value += change;
                 case REMOVE -> value -= change;
                 case SET -> value = change;
+                case DELETE -> value = 0;
             }
             PlayerUtils.setTotalXP(player, value);
         }

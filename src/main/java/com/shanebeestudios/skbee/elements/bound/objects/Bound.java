@@ -55,24 +55,9 @@ public class Bound implements ConfigurationSerializable {
         Preconditions.checkArgument(location.getWorld() == location2.getWorld(), "Worlds have to match");
         this.world = location.getWorld().getName();
         this.id = id;
-
-        Location loc1 = location.getBlock().getLocation();
-        int blockX = loc1.getBlockX();
-        int blockY = loc1.getBlockY();
-        int blockZ = loc1.getBlockZ();
-
-        Location loc2 = location2.getBlock().getLocation();
-        int blockX1 = loc2.getBlockX();
-        int blockY1 = loc2.getBlockY();
-        int blockZ1 = loc2.getBlockZ();
-
-        int minX = Math.min(blockX, blockX1);
-        int minY = Math.min(blockY, blockY1);
-        int minZ = Math.min(blockZ, blockZ1);
-        int maxX = Math.max(blockX, blockX1) + 1;
-        int maxY = Math.max(blockY, blockY1) + 1;
-        int maxZ = Math.max(blockZ, blockZ1) + 1;
-        this.boundingBox = new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
+        Block block1 = location.getBlock();
+        Block block2 = location2.getBlock();
+        this.boundingBox = BoundingBox.of(block1, block2);
     }
 
     /**
@@ -124,7 +109,7 @@ public class Bound implements ConfigurationSerializable {
         World world = getWorld();
         if (world == null) return null;
         Collection<Entity> nearbyEntities = world.getNearbyEntities(this.boundingBox, entity ->
-                type.isAssignableFrom(entity.getClass()) && isInRegion(entity.getLocation()));
+                type.isAssignableFrom(entity.getClass()));
         return new ArrayList<>(nearbyEntities);
     }
 
@@ -258,6 +243,14 @@ public class Bound implements ConfigurationSerializable {
 
     public void resize(Vector v1, Vector v2) {
         this.boundingBox = this.boundingBox.resize(v1.getX(), v1.getY(), v1.getZ(), v2.getX(), v2.getY(), v2.getZ());
+    }
+
+    public void resize(Location loc1, Location loc2) {
+        Preconditions.checkArgument(loc1.getWorld() == loc2.getWorld(), "Worlds have to match");
+        Preconditions.checkArgument(loc1.getWorld().getName().equalsIgnoreCase(this.world), "World cannot be changed!");
+        Block block1 = loc1.getBlock();
+        Block block2 = loc2.getBlock();
+        this.boundingBox = BoundingBox.of(block1, block2);
     }
 
     public void change(Axis axis, Corner corner, int amount) {

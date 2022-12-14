@@ -8,6 +8,7 @@ import ch.njol.skript.lang.function.Parameter;
 import ch.njol.skript.lang.function.SimpleJavaFunction;
 import ch.njol.skript.registrations.Classes;
 import ch.njol.skript.registrations.DefaultClasses;
+import ch.njol.skript.registrations.EventValues;
 import ch.njol.skript.util.Color;
 import ch.njol.skript.util.Timespan;
 import ch.njol.util.StringUtils;
@@ -22,7 +23,9 @@ import org.bukkit.Vibration;
 import org.bukkit.Vibration.Destination.BlockDestination;
 import org.bukkit.entity.Spellcaster;
 import org.bukkit.event.entity.EntityPotionEffectEvent.Cause;
+import org.bukkit.event.entity.EntityTransformEvent.TransformReason;
 import org.bukkit.event.player.PlayerFishEvent.State;
+import org.bukkit.event.player.PlayerQuitEvent.QuitReason;
 import org.bukkit.inventory.ItemFlag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -136,6 +139,28 @@ public class Types {
             Util.logLoading("You may have to use their potion effect causes in SkBee's 'Entity Potion Effect' event.");
         }
 
+        if (Classes.getExactClassInfo(TransformReason.class) == null) {
+            EnumUtils<TransformReason> TRANSOFORM_REASON = new EnumUtils<>(TransformReason.class);
+            Classes.registerClass(new ClassInfo<>(TransformReason.class, "transformreason")
+                    .user("transform ?reasons?")
+                    .name("Transform Reason")
+                    .description("Represents the different reasons for transforming in the entity transform event.")
+                    .usage(TRANSOFORM_REASON.getAllNames())
+                    .since("2.5.3")
+                    .parser(TRANSOFORM_REASON.getParser()));
+        }
+
+        if (Classes.getExactClassInfo(QuitReason.class) == null) {
+            EnumUtils<QuitReason> QUIT_REASON = new EnumUtils<>(QuitReason.class);
+            Classes.registerClass(new ClassInfo<>(QuitReason.class, "quitreason")
+                    .user("quit ?reasons?")
+                    .name("Quit Reason")
+                    .description("Represents the different reasons for calling the player quit event.")
+                    .usage(QUIT_REASON.getAllNames())
+                    .since("INSERT VERSION")
+                    .parser(QUIT_REASON.getParser()));
+        }
+
         // Only register if no other addons have registered this class
         if (Classes.getExactClassInfo(Particle.class) == null) {
             Classes.registerClass(new ClassInfo<>(Particle.class, "particle")
@@ -145,12 +170,6 @@ public class Types {
                             "Some particles require extra data, these are distinguished by their data type within the square brackets.",
                             "DustOption, DustTransition and Vibration each have their own functions to build the appropriate data for these particles.")
                     .usage(ParticleUtil.getNamesAsString())
-                    .examples("play 1 of soul at location of player",
-                            "play 10 of dust using dustOption(green, 10) at location of player",
-                            "play 3 of item using player's tool at location of player",
-                            "play 1 of block using dirt at location of player",
-                            "play 1 of dust_color_transition using dustTransition(blue, green, 3) at location of player",
-                            "play 1 of vibration using vibration({loc1}, {loc2}, 1 second) at {loc1}")
                     .since("1.9.0")
                     .parser(new Parser<>() {
 

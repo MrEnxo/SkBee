@@ -2,7 +2,6 @@ package com.shanebeestudios.skbee.api.NBT;
 
 import de.tr7zw.changeme.nbtapi.NBTBlock;
 import de.tr7zw.changeme.nbtapi.NBTCompound;
-import de.tr7zw.changeme.nbtapi.NBTContainer;
 import org.bukkit.block.Block;
 
 public class NBTCustomBlock extends NBTBlock {
@@ -25,6 +24,10 @@ public class NBTCustomBlock extends NBTBlock {
         if (!data.hasTag("custom")) {
             return setData(data);
         } else if (!data.getString("id").equals(block.getType().getKey().toString())) {
+            // If Block's type has changed, reset custom data
+            if (data.hasTag("custom")) {
+                data.removeKey("custom");
+            }
             return setData(data);
         } else if (data.getInteger("x") != block.getX()) {
             return setData(data);
@@ -37,26 +40,12 @@ public class NBTCustomBlock extends NBTBlock {
     }
 
     private NBTCompound setData(NBTCompound data) {
-        data.clearNBT();
         data.setString("id", block.getType().getKey().toString());
         data.setInteger("x", block.getX());
         data.setInteger("y", block.getY());
         data.setInteger("z", block.getZ());
         data.getOrCreateCompound("custom");
         return data;
-    }
-
-    /**
-     * Get the 'custom' tag of this {@link Block Block's} NBTCompound
-     *
-     * @return 'custom' tag of this Block's NBTCompound
-     */
-    public NBTCompound getCustomData() {
-        return getData().getOrCreateCompound("custom");
-    }
-
-    public NBTCompound cloneCustomData() {
-        return new NBTContainer(getCustomData().toString());
     }
 
 }
